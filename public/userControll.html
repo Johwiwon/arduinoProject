@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+ 
 <head>
   <title>아두이노 출결 시스템</title>
   <meta charset="utf-8">
@@ -7,8 +8,13 @@
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+ 
+ 
 </head>
-<body>
+ 
+<body class="d-flex h-100 text-center text-bg-dark">
+ 
+  <!-- 네비게이션 바 시작 -->
   <nav class="navbar navbar-default navbar-fixed-top">
       <div class="container-fluid">
           <div class="navbar-header">
@@ -21,16 +27,16 @@
               </button>
               <a class="navbar-brand" href="index.html">출결 시스템</a>
           </div>
-
+  
           <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
               <ul class="nav navbar-nav">
                   <li>
                       <a href="index.html">Home</a>
                   </li>
                   <li class="adminMenu">
-                      <a href="moritering.html">출석모니터링</a>
+                      <a href="moritering.html">출석모니터링관리</a>
                   </li>
-                  <li class="adminMenu">
+                  <li class="adminMenu active">
                     <a href="userControll.html">회원관리</a>
                   </li>
                   <li>
@@ -53,48 +59,24 @@
 <br>
 <br>
 
-<div class="container">
-    <h1>환영합니다!</h1>
- 
-    <form>
-        <div class="form-group">
-        <label for="userEmail">이메일 주소:</label>
-        <input type="email" class="form-control" id="userEmail">
-        </div>
-    
-        <div class="form-group">
-            <label for="userName">이름:</label>
-            <input type="text" class="form-control" id="userName">
-        </div>
-    
-        <div class="form-group">
-            <label for="pwd">비밀번호:</label>
-            <input type="password" class="form-control" id="pwd">
-        </div>
-    
-        <button type="button" id="signUpButton" class="btn btn-default join">가입</button>
-        <button type="button" id="googleSign" class="btn btn-default join">구글 아이디로 회원가입</button>
-    </form>
+<main class="px-3">
+  <h1 style="font-weight: bold;">대전대학교 출결 시스템</h1>
+  <h3 class="lead" style="font-weight: bold;">현재시간</h3>
+  <h3 class="lead"  id ="clock" style="font-weight: bold;"></h3>
+</main>
 
-    <div style="margin-top:40px;">
-        <p>로그인으로 돌아가기</p>
-        <a class="btn btn-default join" id="loginmenu" href="login.html">로그인</a>
-    </div>
-        
-</div>
- 
- 
-<script type="module">
-    /*파이어베이스 기본설정*/
+  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-analytics.js";
     import { getAuth,
-             createUserWithEmailAndPassword,
+             signInWithEmailAndPassword ,
              signOut,
              GoogleAuthProvider,
              signInWithPopup,
+             getRedirectResult,
              onAuthStateChanged, } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-auth.js";
-    import { getDatabase ,ref, onValue, set } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-database.js";
+    import { getDatabase, onValue, set } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-database.js";
+    import { getStorage, ref } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-storage.js";
 
     var firebaseEmailAuth; //파이어베이스 인증시스템
     var firebaseDatabase;  //파이어베이스 데이터베이스
@@ -116,11 +98,9 @@
     const provider = new GoogleAuthProvider(); //구글로그인
     const auth = getAuth(app);
     const useDatabase = getDatabase(app);
+    const storage = getStorage(app);
     auth.languageCode = 'ko'; // 언어설정
-    /*파이어베이스 기본설정 끝*/
 
-$(document).ready(function(){
-  
     onAuthStateChanged(auth, (user) => {
             if (user) {
                 const uid = user.uid;
@@ -130,97 +110,29 @@ $(document).ready(function(){
               $("#logoutmenu").hide();
               $("#loginmenu").show();
             }
-        });
+      });
 
-  $("#signUpButton").on('click',function(){
-
-    var email = $('#userEmail').val();
-    var name = $('#userName').val();
-    var password = $("#pwd").val();
-    var registDate =new Date().toLocaleString();
-
-    createUserWithEmailAndPassword(auth,email, password).then(function(user) {
-        userInfo = user; //가입후 콜백 매개변수 전역변수에 담음
-        
-        logUser();  //db적재
-    
-    }, function(error) { 
-        var errorCode = error.code;
-        var errorMessage = error.message;
-        alert(errorCode);
-   
-    });
-
-    //db적재 시작
-    function logUser(){
-        set(
-            ref(useDatabase,'users/'+userInfo.user.uid),
-            {
-                userName : name,
-                userEmail : email,
-                registDt : registDate,
-            }
-        ).then(() => {
-            alert("가입성공");
-            window.location.href = "/index.html"
-        }).catch((error)=> {
-            alert(error);
-        })
-        ;
-    }
-  }); // 클릭이벤트끝
-
-  $("#googleSign").on('click',function(){
-    var email;
-    var name;
-    var uid;
-    var registDate =new Date().toLocaleString();
-    signInWithPopup(auth, provider).then((result)=>{
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        const token = credential.accessToken;
-        const user = result.user;
-
-        email = result.user.email;
-        name = result.user.displayName;
-        uid = result.user.uid;
-
-        logUser();
-
-    }).catch((error)=>{
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        const email = error.customData.email;
-        const credential = GoogleAuthProvider.credentialFromError(error);
-        console.log(error);
-    });
-
-    //db적재 시작
-    function logUser(){
-        set(
-            ref(useDatabase,'users/'+uid),
-            {
-                userName : name,
-                userEmail : email,
-                registDt : registDate,
-            }
-        ).then(() => {
-            alert("가입성공");
-            window.location.href = "/index.html"
-        }).catch((error)=> {
-            alert(error);
-        });
-    }
-  });
-
-  $("#logoutmenu").on("click",()=>{
+      $("#logoutmenu").on("click",()=>{
         signOut(auth).then(() => {
           alert("로그아웃됨");
         }).catch((error) => {
           console.log(error);
         });
       });
+      
 
-});
-</script>
+      const clock = document.querySelector("#clock")
+      function getClock() {
+          const date = new Date();
+          const hours = String(date.getHours()).padStart(2, "0");
+          const min = String(date.getMinutes()).padStart(2, "0");
+          const sec = String(date.getSeconds()).padStart(2, "0");
+          clock.innerText = `${hours}:${min}:${sec}`;
+      }
+
+      getClock();
+      setInterval(getClock, 1000);
+  </script>
 </body>
+ 
 </html>
